@@ -9,6 +9,12 @@ import org.hibernate.annotations.GenericGenerator;
 
 import java.time.LocalDateTime;
 
+/**
+ *  @author kim
+ *  @since 2024.09.17
+ *  @version 1.0.0
+ *  사용자 관련 Entity
+ */
 @Entity
 @Getter
 @Setter

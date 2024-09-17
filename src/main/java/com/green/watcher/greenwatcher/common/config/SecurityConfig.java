@@ -105,10 +105,6 @@ public class SecurityConfig {
                 // 잘못된 URL 요청 시 처리
                 // 권한이 없을 때 처리
                 .accessDeniedPage("/error/403")
-                //잘못된 URL 처리
-                .authenticationEntryPoint((request, response, authException) -> {
-                    response.sendRedirect("/error/404");
-                })
             )
             //자동 로그인 설정
             .rememberMe(rememberMe -> rememberMe
