@@ -1,5 +1,7 @@
 package com.green.watcher.greenwatcher.common.config;
 
+import com.green.watcher.greenwatcher.common.user.security.jwt.JwtAuthenticationFilter;
+import com.green.watcher.greenwatcher.common.user.security.jwt.JwtTokenProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
 import org.springframework.context.annotation.Bean;
@@ -10,9 +12,11 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.rememberme.JdbcTokenRepositoryImpl;
 import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
 import org.springframework.security.web.session.SimpleRedirectInvalidSessionStrategy;
@@ -26,21 +30,44 @@ import java.util.Arrays;
 /**
  *  @author kim
  *  @since 2024.09.16
- *  @version 1.0.0
+ *  @version 1.0.1
  *  spring security bean 설정 클래스
+ *  api 인증 / 인가 jwt 필터 설정 추가
  */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
     private final DataSource dataSource;
+    private final JwtTokenProvider jwtTokenProvider;
+
 
     @Autowired
-    public SecurityConfig(DataSource dataSource) {
+    public SecurityConfig(DataSource dataSource, JwtTokenProvider jwtTokenProvider) {
         this.dataSource = dataSource;
+        this.jwtTokenProvider = jwtTokenProvider;
     }
 
-    //security 필터
+    // API용 SecurityFilterChain (JWT 인증)
+    @Bean
+    public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .csrf(AbstractHttpConfigurer::disable)
+                .securityMatcher("/api/**") // Spring Security 6.x부터 antMatcher 대신 securityMatcher 사용
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/auth/login", "/api/auth/signup").permitAll()
+                        .anyRequest().authenticated()
+                )
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
+                .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider),
+                        UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
+    }
+
+    // 웹용 SecurityFilterChain (폼 로그인)
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http

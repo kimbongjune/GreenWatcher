@@ -51,6 +51,8 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testCompileOnly 'org.projectlombok:lombok'
+    testAnnotationProcessor 'org.projectlombok:lombok'
 
     implementation group: 'org.postgresql', name: 'postgresql', version: '42.7.2' // 추가
     runtimeOnly 'org.postgresql:postgresql' // 추가

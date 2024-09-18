@@ -67,6 +67,7 @@ public class UserService implements UserDetailsService {
         }
 
         User user = dto.toEntity();
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
         User savedUser = userRepository.save(user);
 
         return savedUser.getId() != null;
