@@ -15,6 +15,7 @@ import org.springframework.security.config.annotation.web.configurers.HeadersCon
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.rememberme.JdbcTokenRepositoryImpl;
@@ -23,6 +24,7 @@ import org.springframework.security.web.session.SimpleRedirectInvalidSessionStra
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.CharacterEncodingFilter;
 
 import javax.sql.DataSource;
 import java.util.Arrays;
@@ -41,16 +43,24 @@ public class SecurityConfig {
     private final DataSource dataSource;
     private final JwtTokenProvider jwtTokenProvider;
 
+    private final AuthenticationEntryPoint entryPoint;
+
 
     @Autowired
-    public SecurityConfig(DataSource dataSource, JwtTokenProvider jwtTokenProvider) {
+    public SecurityConfig(DataSource dataSource, JwtTokenProvider jwtTokenProvider, AuthenticationEntryPoint entryPoint) {
         this.dataSource = dataSource;
         this.jwtTokenProvider = jwtTokenProvider;
+        this.entryPoint = entryPoint;
     }
 
     // API용 SecurityFilterChain (JWT 인증)
     @Bean
     public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) throws Exception {
+
+        CharacterEncodingFilter encodingFilter = new CharacterEncodingFilter();
+        encodingFilter.setEncoding("UTF-8");
+        encodingFilter.setForceEncoding(true);
+
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .securityMatcher("/api/**") // Spring Security 6.x부터 antMatcher 대신 securityMatcher 사용
@@ -62,7 +72,8 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider),
-                        UsernamePasswordAuthenticationFilter.class);
+                        UsernamePasswordAuthenticationFilter.class)
+                .exceptionHandling(handler -> handler.authenticationEntryPoint(entryPoint));
 
         return http.build();
     }

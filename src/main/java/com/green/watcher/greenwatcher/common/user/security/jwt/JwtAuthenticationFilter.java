@@ -1,5 +1,6 @@
 package com.green.watcher.greenwatcher.common.user.security.jwt;
 
+import io.jsonwebtoken.MalformedJwtException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -36,32 +37,30 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     FilterChain filterChain) throws ServletException, IOException {
 
         String path = request.getRequestURI();
-        log.debug("Request URI: {}", path);
+        log.info("Request URI: {}", path);
 
         if ("/api/auth/login".equals(path) || "/api/auth/signup".equals(path)) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        // 헤더에서 JWT를 받아옵니다.
-        String token = resolveToken(request);
-        log.debug("JWT Token: {}", token);
+        try {
+            String token = resolveToken(request);
+            if (token == null || !jwtTokenProvider.validateToken(token)) {
+                log.info("throw");
+                throw new MalformedJwtException("검증되지 않은 토큰");
+            }
 
-        // 토큰의 유효성 검사
-        if (token != null && jwtTokenProvider.validateToken(token)) {
-            log.debug("JWT Token is valid");
-            // 토큰이 유효하면 인증 정보를 받아와 SecurityContext에 저장
-            Authentication authentication = jwtTokenProvider.getAuthentication(token);
-            SecurityContextHolder.getContext().setAuthentication(authentication);
-        }else {
-            log.debug("Invalid or missing JWT Token");
-            // 토큰이 없거나 유효하지 않으면 403 Forbidden 반환
-            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            response.getWriter().write("검증되지 않은 토큰");
-            return;
+            Authentication auth = jwtTokenProvider.getAuthentication(token);
+            SecurityContextHolder.getContext().setAuthentication(auth);
+
+        } catch (MalformedJwtException e) {
+            // 예외 발생 시 필터 체인 중단
+            log.info("catch");
+            request.setAttribute("exception", e);
+        }finally {
+            filterChain.doFilter(request, response);
         }
-
-        filterChain.doFilter(request, response);
     }
 
     //토큰 검증
